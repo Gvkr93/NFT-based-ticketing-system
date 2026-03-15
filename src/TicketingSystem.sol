@@ -12,13 +12,13 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
     using Counters for Counters.Counter;
 
     //token id counter
-    Counters.Counter private tokenIdCounter;    
-    
-    constructor () ERC1155("") {
-        platformOwner=payable(msg.sender);
+    Counters.Counter private tokenIdCounter;
+
+    constructor() ERC1155("") {
+        platformOwner = payable(msg.sender);
     }
 
-    function setURI(string memory uri) public onlyOwner{
+    function setURI(string memory uri) public onlyOwner {
         _setURI(uri);
     }
 
@@ -32,46 +32,46 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
     }
 
     // when organisers create an event they have to pay a small fee to the admin
-    uint public eventCreationPrice=0.0002 ether;    
+    uint256 public eventCreationPrice = 0.0002 ether;
 
-    function changeEventCreationPrice(uint _eventCreationPrice) public onlyOwner{
-        eventCreationPrice=_eventCreationPrice;
+    function changeEventCreationPrice(uint256 _eventCreationPrice) public onlyOwner {
+        eventCreationPrice = _eventCreationPrice;
     }
 
     //ticket structure
-    struct Tickettoken{
-        uint tokenId;
-        uint price;
-        uint maxSupply;
-        uint currentSupply;
+    struct Tickettoken {
+        uint256 tokenId;
+        uint256 price;
+        uint256 maxSupply;
+        uint256 currentSupply;
         address organiser;
         address owner;
         bool isActive;
         string tokenUri;
     }
-    
-    mapping(uint =>Tickettoken) idToTicket;
 
-    function getCurrentTokenId() public view returns(uint256){
+    mapping(uint256 => Tickettoken) idToTicket;
+
+    function getCurrentTokenId() public view returns (uint256) {
         return tokenIdCounter.current();
     }
 
-    function getTicketDetails(uint _tokenId) public view returns(Tickettoken memory){
-        uint currentMaxTokenId=tokenIdCounter.current();
-        require(_tokenId<=currentMaxTokenId,"Token id does not exist");
+    function getTicketDetails(uint256 _tokenId) public view returns (Tickettoken memory) {
+        uint256 currentMaxTokenId = tokenIdCounter.current();
+        require(_tokenId <= currentMaxTokenId, "Token id does not exist");
         return idToTicket[_tokenId];
     }
 
     //we will get the IPFS uri , price and max tickets from the organiser, only organiser can mint
-    function createEventToken(string memory uri,uint price,uint amount) public payable{
+    function createEventToken(string memory uri, uint256 price, uint256 amount) public payable {
         //pre conditions
-        require(msg.value>=eventCreationPrice,"Please pay the price for listing your event!!");
-        require(price>0,"Please enter a valid price");
+        require(msg.value >= eventCreationPrice, "Please pay the price for listing your event!!");
+        require(price > 0, "Please enter a valid price");
 
         //tokenid starts from 1
         tokenIdCounter.increment();
-        uint currentTokenId=tokenIdCounter.current();
-        
+        uint256 currentTokenId = tokenIdCounter.current();
+
         //safemint the token to organiser with token id of ticket
         _mint(msg.sender, currentTokenId, amount, "");
 
@@ -94,55 +94,55 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
     }
 
     //function to return all event tickets (for gallery)
-    function getAllEventTokens() public view returns(Tickettoken[] memory){
-        uint ticketCount=tokenIdCounter.current();
-        Tickettoken[] memory tickets=new Tickettoken[](ticketCount);
-        
-        uint currentIndex=0;
-        for(uint i=1;i<=ticketCount;i++){
-            Tickettoken memory currentToken=idToTicket[i];
-            tickets[currentIndex]=currentToken;
-            currentIndex+=1;
+    function getAllEventTokens() public view returns (Tickettoken[] memory) {
+        uint256 ticketCount = tokenIdCounter.current();
+        Tickettoken[] memory tickets = new Tickettoken[](ticketCount);
+
+        uint256 currentIndex = 0;
+        for (uint256 i = 1; i <= ticketCount; i++) {
+            Tickettoken memory currentToken = idToTicket[i];
+            tickets[currentIndex] = currentToken;
+            currentIndex += 1;
         }
         return tickets;
     }
 
     //function to get tickets that the specific user owns
-    function getUserEventTokens() public view returns(Tickettoken[] memory){
-        uint totalTicketCount=tokenIdCounter.current();
-        uint userTicketCount=0;
-        
-        for(uint i=1;i<=totalTicketCount;i++){
-            Tickettoken memory currentToken=idToTicket[i];
-            if(currentToken.organiser==msg.sender || currentToken.owner==msg.sender){
+    function getUserEventTokens() public view returns (Tickettoken[] memory) {
+        uint256 totalTicketCount = tokenIdCounter.current();
+        uint256 userTicketCount = 0;
+
+        for (uint256 i = 1; i <= totalTicketCount; i++) {
+            Tickettoken memory currentToken = idToTicket[i];
+            if (currentToken.organiser == msg.sender || currentToken.owner == msg.sender) {
                 userTicketCount++;
             }
         }
-        
-        Tickettoken[] memory tickets=new Tickettoken[](userTicketCount);
-        uint index=0;
 
-        for(uint i=1;i<=totalTicketCount;i++){
-            Tickettoken memory currentToken=idToTicket[i];
+        Tickettoken[] memory tickets = new Tickettoken[](userTicketCount);
+        uint256 index = 0;
+
+        for (uint256 i = 1; i <= totalTicketCount; i++) {
+            Tickettoken memory currentToken = idToTicket[i];
             // BUG FIX: Added this if statement so it only returns the actual user's tickets, not empty ones!
-            if(currentToken.organiser==msg.sender || currentToken.owner==msg.sender){
-                tickets[index]=currentToken;
+            if (currentToken.organiser == msg.sender || currentToken.owner == msg.sender) {
+                tickets[index] = currentToken;
                 index++;
             }
         }
         return tickets;
     }
 
-    function executeSale(uint tokenId,uint amount) payable public{
-        Tickettoken memory token=idToTicket[tokenId];
-        uint currentSupply=token.currentSupply;
-        uint price=token.price;
-        address organiser=token.organiser;
-        
+    function executeSale(uint256 tokenId, uint256 amount) public payable {
+        Tickettoken memory token = idToTicket[tokenId];
+        uint256 currentSupply = token.currentSupply;
+        uint256 price = token.price;
+        address organiser = token.organiser;
+
         //check if enough tickets available
         require(currentSupply >= amount, "Not enough tickets available!!");
-        
-        // CRITICAL BUG FIX: You must multiply the price by the amount they are buying!
+
+        //You must multiply the price by the amount they are buying!
         require(msg.value >= (price * amount), "Please pay the correct price!");
 
         _safeTransferFrom(address(this), msg.sender, tokenId, amount, "");
@@ -154,7 +154,13 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
         idToTicket[tokenId].currentSupply = currentSupply - amount;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, ERC1155Receiver) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC1155, ERC1155Receiver)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
 }
