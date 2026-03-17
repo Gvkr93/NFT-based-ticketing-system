@@ -9,7 +9,7 @@ import {ERC1155Holder} from "@openzeppelin/contracts/token/ERC1155/utils/ERC1155
 
 contract Ticketing1155 is ERC1155, ERC1155Holder {
     using Counters for Counters.Counter;
-    
+
     address payable public platformOwner;
     Counters.Counter private tokenIdCounter;
     Counters.Counter private listingIdCounter;
@@ -118,9 +118,9 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
     // The Anti-Scalping Mechanism
     function listForResale(uint256 tokenId, uint256 amount, uint256 resalePricePerTicket) public {
         require(balanceOf(msg.sender, tokenId) >= amount, "You do not own enough tickets");
-        
+
         Tickettoken memory originalTicket = idToTicket[tokenId];
-        
+
         // Core Feature: Enforce maximum 10% profit margin
         uint256 maxPrice = originalTicket.price + ((originalTicket.price * 10) / 100);
         require(resalePricePerTicket <= maxPrice, "Price exceeds 10% profit limit! Scalping prevented.");
@@ -165,7 +165,7 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
 
         // Secure, automated fund routing
         payable(originalTicket.organiser).transfer(royaltyAmount); // 5% back to creator
-        payable(listing.seller).transfer(sellerAmount);            // Profit to fan
+        payable(listing.seller).transfer(sellerAmount); // Profit to fan
     }
 
     // --- UTILITY & VIEW FUNCTIONS ---
