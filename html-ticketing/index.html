@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TicketChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+ 
+:root{
+  --bg:#0c0c0e;
+  --surface:#131316;
+  --card:#18181d;
+  --border:#26262e;
+  --border-hi:#3a3a48;
+  --text:#f2f0ff;
+  --muted:#6b6b80;
+  --dim:#3a3a48;
+  --accent:#e8ff47;
+  --accent-dark:#b8cc1e;
+  --green:#3dffa0;
+  --red:#ff4f6b;
+  --font:'Syne',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+ 
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+ 
+/* ── GRAIN OVERLAY ── */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.04;
+  pointer-events:none;
+  z-index:1000;
+}
+ 
+/* ── GRID BACKGROUND ── */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size:48px 48px;
+  opacity:.35;
+  pointer-events:none;
+  z-index:0;
+}
+ 
+/* ── HEADER ── */
+header{
+  position:fixed;top:0;left:0;right:0;
+  z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 36px;
+  background:rgba(12,12,14,.85);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+ 
+.logo{
+  display:flex;align-items:center;gap:12px;
+  font-size:18px;font-weight:800;letter-spacing:-.02em;
+}
+.logo-mark{
+  width:32px;height:32px;
+  background:var(--accent);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+  color:#0c0c0e;
+}
+.logo span{color:var(--accent)}
+ 
+.nav-links{display:flex;gap:4px}
+.nav-btn{
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  padding:8px 16px;border-radius:6px;
+  background:transparent;color:var(--muted);
+  border:none;cursor:pointer;
+  letter-spacing:.04em;transition:all .2s;
+}
+.nav-btn:hover,.nav-btn.active{color:var(--text);background:var(--card)}
+ 
+#connect-btn{
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  padding:10px 20px;border-radius:8px;
+  background:var(--accent);color:#0c0c0e;
+  border:none;cursor:pointer;letter-spacing:.04em;
+  transition:all .2s;
+  display:flex;align-items:center;gap:8px;
+}
+#connect-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}
+#connect-btn.connected{
+  background:rgba(61,255,160,.12);
+  color:var(--green);
+  border:1px solid rgba(61,255,160,.25);
+}
+ 
+.wallet-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--muted);
+}
+.wallet-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+ 
+/* ── MAIN ── */
+main{
+  position:relative;z-index:1;
+  padding-top:88px;
+  max-width:1100px;margin:0 auto;
+  padding-left:24px;padding-right:24px;
+}
+ 
+/* ── HERO ── */
+.hero{
+  padding:72px 0 56px;
+  display:grid;grid-template-columns:1fr auto;
+  align-items:end;gap:40px;
+}
+.hero-eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+  color:var(--accent);text-transform:uppercase;margin-bottom:16px;
+}
+.hero h1{
+  font-size:clamp(40px,5vw,68px);
+  font-weight:800;
+  line-height:1.05;
+  letter-spacing:-.03em;
+}
+.hero h1 span{
+  color:transparent;
+  -webkit-text-stroke:1px var(--border-hi);
+}
+.hero-desc{
+  margin-top:20px;
+  font-size:15px;color:var(--muted);
+  line-height:1.7;max-width:480px;
+}
+.hero-stats{
+  display:flex;flex-direction:column;gap:1px;
+  border:1px solid var(--border);border-radius:12px;
+  overflow:hidden;min-width:200px;
+}
+.hero-stat{
+  padding:14px 20px;background:var(--card);
+}
+.hero-stat:not(:last-child){border-bottom:1px solid var(--border)}
+.stat-n{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent)}
+.stat-l{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono);letter-spacing:.06em}
+ 
+/* ── STATUS BAR ── */
+#status-bar{
+  display:none;
+  align-items:center;gap:12px;
+  padding:12px 18px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:24px;
+  font-family:var(--mono);font-size:12px;
+}
+#status-bar.show{display:flex}
+.status-spinner{
+  width:14px;height:14px;
+  border:2px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+#status-text{color:var(--muted)}
+ 
+/* ── SECTION ── */
+.section{margin-bottom:56px}
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:24px;
+  padding-bottom:16px;
+  border-bottom:1px solid var(--border);
+}
+.section-title{
+  font-size:13px;font-weight:700;
+  font-family:var(--mono);letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);
+}
+.section-count{
+  font-family:var(--mono);font-size:11px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:4px;padding:3px 10px;color:var(--muted);
+}
+ 
+/* ── TICKET GRID ── */
+.ticket-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:16px;
+}
+ 
+.ticket-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  transition:border-color .25s,transform .2s;
+  cursor:pointer;
+  position:relative;
+}
+.ticket-card:hover{
+  border-color:var(--accent);
+  transform:translateY(-3px);
+}
+ 
+.ticket-banner{
+  height:80px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;
+  position:relative;
+  overflow:hidden;
+}
+.ticket-banner-text{
+  font-family:var(--mono);font-size:10px;
+  color:rgba(255,255,255,.15);
+  position:absolute;bottom:6px;right:10px;
+  letter-spacing:.08em;
+}
+ 
+/* ticket perforation */
+.ticket-perf{
+  display:flex;align-items:center;
+  padding:0 16px;
+  position:relative;
+}
+.perf-line{flex:1;border-top:1px dashed var(--border)}
+.perf-circle{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--bg);
+  border:1px solid var(--border);
+  flex-shrink:0;margin:0 -8px;
+}
+ 
+.ticket-body{padding:16px}
+.ticket-name{
+  font-size:16px;font-weight:700;
+  letter-spacing:-.02em;margin-bottom:4px;
+}
+.ticket-id{
+  font-family:var(--mono);font-size:10px;color:var(--muted);
+  margin-bottom:12px;
+}
+.ticket-price-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;
+}
+.ticket-price{
+  font-family:var(--mono);font-size:20px;font-weight:700;
+  color:var(--accent);
+}
+.supply-info{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:right}
+ 
+.supply-track{
+  height:3px;background:var(--border);border-radius:2px;
+  overflow:hidden;margin-bottom:14px;
+}
+.supply-fill{
+  height:100%;border-radius:2px;
+  background:var(--accent);
+  transition:width .8s ease;
+}
+ 
+.ticket-footer{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.badge{
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:4px;
+  letter-spacing:.04em;
+}
+.badge-active{
+  background:rgba(61,255,160,.1);
+  color:var(--green);
+  border:1px solid rgba(61,255,160,.2);
+}
+.badge-sold{
+  background:rgba(255,79,107,.08);
+  color:var(--red);
+  border:1px solid rgba(255,79,107,.18);
+}
+.badge-erc{
+  background:rgba(232,255,71,.08);
+  color:var(--accent);
+  border:1px solid rgba(232,255,71,.15);
+}
+ 
+.buy-btn{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  padding:8px 16px;border-radius:7px;
+  background:var(--accent);color:#0c0c0e;
+  border:none;cursor:pointer;
+  letter-spacing:.04em;transition:all .2s;
+}
+.buy-btn:hover{background:var(--accent-dark)}
+.buy-btn:disabled{
+  background:var(--border);color:var(--muted);
+  cursor:not-allowed;
+}
+ 
+/* ── FORM PANELS ── */
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ 
+.panel{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:24px;
+}
+.panel-title{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:20px;
+  display:flex;align-items:center;gap:8px;
+}
+.panel-title::before{
+  content:'';
+  display:inline-block;
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--accent);
+}
+ 
+.form-field{margin-bottom:14px}
+.form-label{
+  display:block;
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  color:var(--muted);text-transform:uppercase;
+  margin-bottom:6px;
+}
+.form-input{
+  width:100%;
+  background:#0e0e12;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:11px 14px;
+  color:var(--text);
+  font-family:var(--mono);font-size:13px;
+  outline:none;
+  transition:border-color .2s;
+}
+.form-input:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--dim)}
+ 
+.warning-box{
+  background:rgba(255,79,107,.07);
+  border:1px solid rgba(255,79,107,.2);
+  border-radius:8px;
+  padding:10px 14px;
+  font-family:var(--mono);font-size:11px;
+  color:var(--red);
+  margin-bottom:12px;
+  display:none;
+}
+.ok-box{
+  background:rgba(61,255,160,.07);
+  border:1px solid rgba(61,255,160,.2);
+  border-radius:8px;
+  padding:10px 14px;
+  font-family:var(--mono);font-size:11px;
+  color:var(--green);
+  margin-bottom:12px;
+  display:none;
+}
+ 
+.submit-btn{
+  width:100%;
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  padding:12px;border-radius:9px;
+  background:var(--accent);color:#0c0c0e;
+  border:none;cursor:pointer;
+  letter-spacing:.06em;
+  transition:all .2s;
+}
+.submit-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}
+.submit-btn.secondary{
+  background:transparent;
+  color:var(--text);
+  border:1px solid var(--border);
+}
+.submit-btn.secondary:hover{border-color:var(--accent);color:var(--accent)}
+ 
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:28px;right:28px;
+  background:var(--card);
+  border:1px solid var(--border-hi);
+  border-radius:10px;
+  padding:14px 20px;
+  font-family:var(--mono);font-size:12px;
+  color:var(--text);
+  opacity:0;
+  transform:translateY(10px);
+  transition:all .3s;
+  pointer-events:none;
+  z-index:9999;
+  max-width:340px;
+  display:flex;align-items:center;gap:10px;
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.ok{border-color:rgba(61,255,160,.3);color:var(--green)}
+.toast.err{border-color:rgba(255,79,107,.3);color:var(--red)}
+ 
+/* ── CONNECT OVERLAY ── */
+#connect-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(12,12,14,.92);
+  backdrop-filter:blur(8px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .3s;
+}
+#connect-overlay.show{opacity:1;pointer-events:all}
+ 
+.connect-modal{
+  background:var(--card);
+  border:1px solid var(--border-hi);
+  border-radius:20px;
+  padding:48px;
+  max-width:440px;width:90%;
+  text-align:center;
+  transform:scale(.96);
+  transition:transform .3s;
+}
+#connect-overlay.show .connect-modal{transform:scale(1)}
+.connect-modal-icon{
+  font-size:48px;margin-bottom:20px;
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.connect-modal h2{
+  font-size:26px;font-weight:800;letter-spacing:-.03em;margin-bottom:10px;
+}
+.connect-modal p{
+  color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:32px;
+}
+.connect-modal-btn{
+  width:100%;
+  font-family:var(--mono);font-size:13px;font-weight:700;
+  padding:16px;border-radius:10px;
+  background:var(--accent);color:#0c0c0e;
+  border:none;cursor:pointer;
+  letter-spacing:.04em;
+  transition:all .2s;
+  margin-bottom:10px;
+}
+.connect-modal-btn:hover{background:var(--accent-dark)}
+.connect-modal-skip{
+  font-family:var(--mono);font-size:11px;
+  color:var(--muted);cursor:pointer;
+  background:none;border:none;
+  letter-spacing:.06em;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+ 
+/* ── EMPTY STATE ── */
+.empty{
+  text-align:center;padding:64px 24px;
+  color:var(--muted);font-family:var(--mono);font-size:12px;
+}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.4}
+ 
+/* ── METAMASK MISSING ── */
+.mm-notice{
+  background:rgba(232,255,71,.05);
+  border:1px solid rgba(232,255,71,.15);
+  border-radius:10px;
+  padding:14px 18px;
+  font-family:var(--mono);font-size:12px;
+  color:var(--accent);
+  margin-bottom:20px;
+  display:flex;align-items:center;gap:10px;
+}
+ 
+/* ── ANIMATIONS ── */
+@keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fadein{animation:fadein .4s ease both}
+ 
+.ticket-card:nth-child(1){animation-delay:.05s}
+.ticket-card:nth-child(2){animation-delay:.1s}
+.ticket-card:nth-child(3){animation-delay:.15s}
+</style>
+</head>
+<body>
+ 
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">⬡</div>
+    Ticket<span>Chain</span>
+  </div>
+ 
+  <nav class="nav-links">
+    <button class="nav-btn active" onclick="showTab('explore',this)">Explore</button>
+    <button class="nav-btn" onclick="showTab('create',this)">Create</button>
+    <button class="nav-btn" onclick="showTab('resale',this)">Resale</button>
+    <button class="nav-btn" onclick="showTab('mytickets',this)">My Tickets</button>
+  </nav>
+ 
+  <button id="connect-btn" onclick="connectWallet()">
+    <div class="wallet-dot" id="wallet-dot"></div>
+    <span id="connect-label">Connect Wallet</span>
+  </button>
+</header>
+ 
+<!-- ── CONNECT OVERLAY ── -->
+<div id="connect-overlay">
+  <div class="connect-modal">
+    <div class="connect-modal-icon">🦊</div>
+    <h2>Connect your wallet</h2>
+    <p>TicketChain uses MetaMask to interact with the Ethereum blockchain. Your keys, your tickets — no middlemen.</p>
+    <button class="connect-modal-btn" onclick="connectWallet()">Connect MetaMask</button>
+    <button class="connect-modal-skip" onclick="dismissOverlay()">Browse without wallet</button>
+  </div>
+</div>
+ 
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+ 
+<!-- ── MAIN ── -->
+<main>
+ 
+  <!-- HERO -->
+  <div class="hero fadein">
+    <div>
+      <div class="hero-eyebrow">ERC-1155 · Anti-Scalping · On-chain Royalties</div>
+      <h1>Tickets that<br>can't be <span>faked</span><br>or <span>flipped</span>.</h1>
+      <p class="hero-desc">Blockchain-native ticketing with a hardcoded 10% resale ceiling enforced by the Ethereum Virtual Machine — not a company's terms of service.</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="stat-n" id="stat-events">—</div>
+        <div class="stat-l">LIVE EVENTS</div>
+      </div>
+      <div class="hero-stat">
+        <div class="stat-n" id="stat-supply">—</div>
+        <div class="stat-l">TICKETS AVAILABLE</div>
+      </div>
+      <div class="hero-stat">
+        <div class="stat-n">10%</div>
+        <div class="stat-l">MAX RESALE PROFIT</div>
+      </div>
+      <div class="hero-stat">
+        <div class="stat-n">5%</div>
+        <div class="stat-l">CREATOR ROYALTY</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- STATUS BAR -->
+  <div id="status-bar">
+    <div class="status-spinner"></div>
+    <span id="status-text">Processing...</span>
+  </div>
+ 
+  <!-- ── TAB: EXPLORE ── -->
+  <div id="tab-explore" class="section">
+    <div class="section-head">
+      <div class="section-title">Live Events</div>
+      <div class="section-count" id="event-count">loading...</div>
+    </div>
+    <div id="no-mm" class="mm-notice" style="display:none">
+      ⚠ MetaMask not detected. Install MetaMask to buy tickets or create events.
+    </div>
+    <div class="ticket-grid" id="ticket-grid">
+      <div class="empty"><div class="empty-icon">🎫</div>Loading events from chain...</div>
+    </div>
+  </div>
+ 
+  <!-- ── TAB: CREATE ── -->
+  <div id="tab-create" class="section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">Create Event</div>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-title">Event Details</div>
+        <div class="form-field">
+          <label class="form-label">IPFS Metadata URI</label>
+          <input class="form-input" id="c-uri" placeholder="ipfs://QmYourCIDhere...">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Ticket Price (ETH)</label>
+          <input class="form-input" id="c-price" type="number" step="0.001" placeholder="0.05">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Total Supply</label>
+          <input class="form-input" id="c-supply" type="number" placeholder="100">
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em;margin-bottom:8px">FEE BREAKDOWN</div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">Listing fee</span><span>0.0002 ETH</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">Platform cut</span><span>0%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;padding:5px 0">
+            <span style="color:var(--muted)">Resale royalty (auto)</span><span style="color:var(--accent)">5%</span>
+          </div>
+        </div>
+        <button class="submit-btn" onclick="createNewEvent()">Deploy Event Token →</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title">How it works</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:24px;height:24px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#0c0c0e;flex-shrink:0">1</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6"><strong style="color:var(--text)">Upload metadata to IPFS</strong> — event name, image, date, venue. Paste the ipfs:// URI above.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:24px;height:24px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#0c0c0e;flex-shrink:0">2</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6"><strong style="color:var(--text)">Pay 0.0002 ETH</strong> listing fee. The contract mints your entire supply and escrows it for frictionless sales.</div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="width:24px;height:24px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;color:#0c0c0e;flex-shrink:0">3</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6"><strong style="color:var(--text)">Earn automatically</strong> — every primary and secondary sale routes ETH directly to your wallet. No manual withdrawals.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ── TAB: RESALE ── -->
+  <div id="tab-resale" class="section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">Resale Market</div>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-title">List for Resale</div>
+        <div style="background:rgba(232,255,71,.06);border:1px solid rgba(232,255,71,.15);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-family:var(--mono);font-size:11px;color:var(--accent);line-height:1.6">
+          ⚡ Max +10% above original price. Anything higher is reverted by the contract.
+        </div>
+        <div class="form-field">
+          <label class="form-label">Token ID</label>
+          <input class="form-input" id="r-tokenid" type="number" placeholder="1" oninput="checkPrice()">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Amount</label>
+          <input class="form-input" id="r-amount" type="number" placeholder="1">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Resale Price per Ticket (ETH)</label>
+          <input class="form-input" id="r-price" type="number" step="0.001" placeholder="0.054" oninput="checkPrice()">
+        </div>
+        <div class="warning-box" id="price-warn"></div>
+        <div class="ok-box" id="price-ok"></div>
+        <button class="submit-btn" onclick="listResale()">Approve + List (2 txns)</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Royalty Calculator</div>
+        <div class="form-field">
+          <label class="form-label">Sale Price (ETH)</label>
+          <input class="form-input" id="rc-price" type="number" step="0.001" placeholder="0.054" oninput="calcRoyalty()">
+        </div>
+        <div id="royalty-result" style="display:none;margin-top:16px">
+          <div style="display:flex;flex-direction:column;gap:1px;border-radius:10px;overflow:hidden">
+            <div style="display:flex;justify-content:space-between;background:var(--surface);padding:12px 16px;font-family:var(--mono);font-size:12px">
+              <span style="color:var(--muted)">Total sale</span>
+              <span id="rc-total"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;background:var(--surface);padding:12px 16px;font-family:var(--mono);font-size:12px">
+              <span style="color:var(--muted)">5% → organiser</span>
+              <span id="rc-royalty" style="color:#a88bff"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;background:var(--surface);padding:12px 16px;font-family:var(--mono);font-size:12px;border-top:1px solid var(--border)">
+              <span style="color:var(--muted)">You receive</span>
+              <span id="rc-seller" style="color:var(--green)"></span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:20px;padding:14px;background:var(--surface);border-radius:8px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.8">
+          Enforced in <span style="color:#a88bff">buyResaleTicket()</span>:<br>
+          royalty = totalCost × 5 / 100<br>
+          seller = totalCost − royalty
+        </div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- ── TAB: MY TICKETS ── -->
+  <div id="tab-mytickets" class="section" style="display:none">
+    <div class="section-head">
+      <div class="section-title">My Tickets</div>
+    </div>
+    <div class="ticket-grid" id="my-ticket-grid">
+      <div class="empty"><div class="empty-icon">👛</div>Connect wallet to see your tickets</div>
+    </div>
+  </div>
+ 
+</main>
+ 
+<script type="module">
+import { ethers } from "./ethers-6.7.esm.min.js"
+import { ABI, CONTRACT_ADDRESSES } from "./constants.js"
+ 
+// ── state ─────────────────────────────────────────────────
+let provider, signer, contract, walletAddress
+ 
+const BANNERS = [
+  {bg:"#111a0e",emoji:"🎸"},
+  {bg:"#0e0e1a",emoji:"💻"},
+  {bg:"#1a0e0e",emoji:"🎭"},
+  {bg:"#0e1a1a",emoji:"🎤"},
+  {bg:"#1a1a0e",emoji:"🎺"},
+]
+ 
+// ── boot ──────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  if (!window.ethereum) {
+    document.getElementById('no-mm').style.display = 'flex'
+  } else {
+    // Show connect overlay after short delay
+    setTimeout(() => {
+      document.getElementById('connect-overlay').classList.add('show')
+    }, 800)
+    // Auto-reconnect if already connected
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts.length > 0) initWallet()
+    })
+    window.ethereum.on('accountsChanged', () => initWallet())
+    window.ethereum.on('chainChanged', () => location.reload())
+  }
+  loadTickets()
+})
+ 
+// ── wallet ────────────────────────────────────────────────
+async function initWallet() {
+  provider = new ethers.BrowserProvider(window.ethereum)
+  signer   = await provider.getSigner()
+  walletAddress = await signer.getAddress()
+ 
+  const network  = await provider.getNetwork()
+  const chainId  = Number(network.chainId)
+  const addr     = CONTRACT_ADDRESSES[chainId]
+  if (!addr) { toast('No contract on chain ' + chainId, 'err'); return }
+ 
+  contract = new ethers.Contract(addr, ABI, signer)
+ 
+  // Update header
+  const short = walletAddress.slice(0,6) + '...' + walletAddress.slice(-4)
+  document.getElementById('connect-label').textContent = short
+  document.getElementById('connect-btn').classList.add('connected')
+  document.getElementById('wallet-dot').classList.add('live')
+ 
+  dismissOverlay()
+  loadTickets()
+  loadMyTickets()
+}
+ 
+window.connectWallet = async () => {
+  if (!window.ethereum) {
+    toast('MetaMask not installed — get it at metamask.io', 'err')
+    return
+  }
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' })
+    await initWallet()
+    toast('Wallet connected ✓', 'ok')
+  } catch(e) {
+    toast('Connection rejected', 'err')
+  }
+}
+ 
+window.dismissOverlay = () => {
+  document.getElementById('connect-overlay').classList.remove('show')
+}
+ 
+// ── read-only contract ────────────────────────────────────
+function getReadContract() {
+  const chainId = 31337  // default to anvil; update for sepolia
+  const addr = CONTRACT_ADDRESSES[chainId]
+  if (!addr) return null
+  const rp = new ethers.JsonRpcProvider('http://localhost:8545')
+  return new ethers.Contract(addr, ABI, rp)
+}
+ 
+// ── load tickets ──────────────────────────────────────────
+async function loadTickets() {
+  try {
+    const c = contract || getReadContract()
+    if (!c) return
+    const tickets = await c.getAllEventTokens()
+ 
+    let totalSupply = 0
+    tickets.forEach(t => { totalSupply += Number(t.currentSupply) })
+    document.getElementById('stat-events').textContent  = tickets.length
+    document.getElementById('stat-supply').textContent  = totalSupply
+    document.getElementById('event-count').textContent  = tickets.length + ' events'
+ 
+    const grid = document.getElementById('ticket-grid')
+    if (tickets.length === 0) {
+      grid.innerHTML = '<div class="empty"><div class="empty-icon">🎫</div>No events yet — create the first one!</div>'
+      return
+    }
+    grid.innerHTML = tickets.map((t, i) => renderCard(t, i)).join('')
+  } catch(e) {
+    console.log('Read error (is Anvil running?):', e.message)
+    document.getElementById('ticket-grid').innerHTML =
+      '<div class="empty"><div class="empty-icon">⚠️</div>Could not reach chain — is Anvil running?</div>'
+  }
+}
+ 
+function renderCard(t, i) {
+  const banner  = BANNERS[i % BANNERS.length]
+  const price   = ethers.formatEther(t.price)
+  const cur     = Number(t.currentSupply)
+  const max     = Number(t.maxSupply)
+  const pct     = max > 0 ? (cur / max * 100).toFixed(0) : 0
+  const active  = t.isActive && cur > 0
+  const short   = t.organiser.slice(0,6) + '...' + t.organiser.slice(-4)
+  const tid     = Number(t.tokenId)
+ 
+  return `
+    <div class="ticket-card fadein">
+      <div class="ticket-banner" style="background:${banner.bg}">
+        <span>${banner.emoji}</span>
+        <span class="ticket-banner-text">ERC-1155 · #${tid}</span>
+      </div>
+      <div class="ticket-perf">
+        <div class="perf-circle"></div>
+        <div class="perf-line"></div>
+        <div class="perf-circle"></div>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-name">Event Token #${tid}</div>
+        <div class="ticket-id">organiser: ${short}</div>
+        <div class="ticket-price-row">
+          <div class="ticket-price">${parseFloat(price).toFixed(4)} ETH</div>
+          <div class="supply-info">${cur} / ${max}<br>remaining</div>
+        </div>
+        <div class="supply-track">
+          <div class="supply-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="ticket-footer">
+          <div style="display:flex;gap:6px">
+            <span class="badge ${active ? 'badge-active' : 'badge-sold'}">${active ? 'ON SALE' : 'SOLD OUT'}</span>
+            <span class="badge badge-erc">ERC-1155</span>
+          </div>
+          <button class="buy-btn" ${!active ? 'disabled' : ''}
+            onclick="buyTicket(${tid}, '${t.price}')">
+            ${active ? 'Buy' : 'Sold Out'}
+          </button>
+        </div>
+      </div>
+    </div>`
+}
+ 
+// ── buy ticket ────────────────────────────────────────────
+window.buyTicket = async (tokenId, price) => {
+  if (!contract) { showConnectOverlay(); return }
+  try {
+    setStatus('Check MetaMask...')
+    const tx = await contract.executeSale(BigInt(tokenId), 1n, { value: BigInt(price) })
+    setStatus('Confirming transaction...')
+    await tx.wait()
+    clearStatus()
+    toast('Ticket purchased! ✓', 'ok')
+    loadTickets()
+    loadMyTickets()
+  } catch(e) {
+    clearStatus()
+    toast(e.reason || e.message || 'Transaction failed', 'err')
+  }
+}
+ 
+// ── create event ──────────────────────────────────────────
+window.createNewEvent = async () => {
+  if (!contract) { showConnectOverlay(); return }
+  const uri    = document.getElementById('c-uri').value.trim()
+  const price  = document.getElementById('c-price').value
+  const supply = document.getElementById('c-supply').value
+  if (!uri || !price || !supply) { toast('Fill in all fields', 'err'); return }
+  try {
+    setStatus('Check MetaMask...')
+    const tx = await contract.createEventToken(
+      uri,
+      ethers.parseEther(price),
+      BigInt(supply),
+      { value: ethers.parseEther('0.0002') }
+    )
+    setStatus('Deploying event token...')
+    await tx.wait()
+    clearStatus()
+    toast('Event created! ✓', 'ok')
+    loadTickets()
+  } catch(e) {
+    clearStatus()
+    toast(e.reason || e.message || 'Transaction failed', 'err')
+  }
+}
+ 
+// ── resale ────────────────────────────────────────────────
+window.listResale = async () => {
+  if (!contract) { showConnectOverlay(); return }
+  const tokenId = document.getElementById('r-tokenid').value
+  const amount  = document.getElementById('r-amount').value
+  const price   = document.getElementById('r-price').value
+  if (!tokenId || !amount || !price) { toast('Fill in all fields', 'err'); return }
+  try {
+    setStatus('Txn 1/2 — Approving... check MetaMask')
+    const a = await contract.setApprovalForAll(
+      CONTRACT_ADDRESSES[await getChainId()], true
+    )
+    await a.wait()
+    setStatus('Txn 2/2 — Listing... check MetaMask')
+    const tx = await contract.listForResale(
+      BigInt(tokenId), BigInt(amount), ethers.parseEther(price)
+    )
+    await tx.wait()
+    clearStatus()
+    toast('Listed for resale! ✓', 'ok')
+  } catch(e) {
+    clearStatus()
+    const msg = e.reason || e.message || ''
+    if (msg.includes('Scalping')) toast('Rejected: price exceeds 10% ceiling', 'err')
+    else toast(msg || 'Transaction failed', 'err')
+  }
+}
+ 
+// ── my tickets ────────────────────────────────────────────
+async function loadMyTickets() {
+  if (!contract || !walletAddress) return
+  try {
+    const tickets = await contract.getAllEventTokens()
+    const mine = []
+    for (const t of tickets) {
+      const bal = await contract.balanceOf(walletAddress, t.tokenId)
+      if (Number(bal) > 0) mine.push({ ...t, balance: Number(bal) })
+    }
+    const grid = document.getElementById('my-ticket-grid')
+    if (mine.length === 0) {
+      grid.innerHTML = '<div class="empty"><div class="empty-icon">🎫</div>You don\'t own any tickets yet</div>'
+      return
+    }
+    grid.innerHTML = mine.map((t, i) => renderCard(t, i)).join('')
+  } catch(e) { console.log('my tickets error:', e.message) }
+}
+ 
+// ── price checker ─────────────────────────────────────────
+window.checkPrice = async () => {
+  const tid   = parseInt(document.getElementById('r-tokenid').value)
+  const price = parseFloat(document.getElementById('r-price').value)
+  const warn  = document.getElementById('price-warn')
+  const ok    = document.getElementById('price-ok')
+  warn.style.display = 'none'; ok.style.display = 'none'
+  if (!tid || !price) return
+  try {
+    const c       = contract || getReadContract()
+    const details = await c.getTicketDetails(tid)
+    const orig    = parseFloat(ethers.formatEther(details.price))
+    const max     = orig * 1.1
+    const pct     = (((price - orig) / orig) * 100).toFixed(1)
+    if (price > max) {
+      warn.style.display = 'block'
+      warn.textContent = `✗ WOULD REVERT — ${price} ETH is ${pct}% above original (max ${max.toFixed(4)} ETH)`
+    } else {
+      ok.style.display = 'block'
+      ok.textContent = `✓ Valid — ${pct}% profit, within the 10% ceiling`
+    }
+  } catch(e) {}
+}
+ 
+// ── royalty calc ──────────────────────────────────────────
+window.calcRoyalty = () => {
+  const price = parseFloat(document.getElementById('rc-price').value) || 0
+  if (!price) { document.getElementById('royalty-result').style.display = 'none'; return }
+  const royalty = price * 0.05
+  const seller  = price - royalty
+  document.getElementById('rc-total').textContent   = price.toFixed(4) + ' ETH'
+  document.getElementById('rc-royalty').textContent = royalty.toFixed(4) + ' ETH'
+  document.getElementById('rc-seller').textContent  = seller.toFixed(4) + ' ETH'
+  document.getElementById('royalty-result').style.display = 'block'
+}
+ 
+// ── helpers ───────────────────────────────────────────────
+async function getChainId() {
+  if (!provider) return 31337
+  const n = await provider.getNetwork()
+  return Number(n.chainId)
+}
+ 
+function showConnectOverlay() {
+  document.getElementById('connect-overlay').classList.add('show')
+}
+ 
+function setStatus(msg) {
+  document.getElementById('status-text').textContent = msg
+  document.getElementById('status-bar').classList.add('show')
+}
+ 
+function clearStatus() {
+  document.getElementById('status-bar').classList.remove('show')
+}
+ 
+let toastTimer
+window.toast = (msg, type = '') => {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.className = 'toast show' + (type ? ' ' + type : '')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3500)
+}
+ 
+// ── tabs ──────────────────────────────────────────────────
+window.showTab = (id, btn) => {
+  ['explore','create','resale','mytickets'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === id ? 'block' : 'none'
+  })
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  if (id === 'mytickets') loadMyTickets()
+}
+</script>
+</body>
+</html>

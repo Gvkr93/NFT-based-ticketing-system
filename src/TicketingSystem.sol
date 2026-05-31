@@ -168,7 +168,6 @@ contract Ticketing1155 is ERC1155, ERC1155Holder {
         payable(listing.seller).transfer(sellerAmount); // Profit to fan
     }
 
-    // --- UTILITY & VIEW FUNCTIONS ---
     function getCurrentTokenId() public view returns (uint256) {
         return tokenIdCounter.current();
     }
