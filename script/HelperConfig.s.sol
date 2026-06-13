@@ -27,17 +27,11 @@ contract HelperConfig is Script {
     function getSepoliaConfig() public view returns (NetworkConfig memory) {
         // address(0) means not deployed yet — will revert loudly if you
         // accidentally try to use it before deploying to sepolia
-        return NetworkConfig({
-            ticketingContract: address(0),
-            deployerKey: vm.envUint("PRIVATE_KEY")
-        });
+        return NetworkConfig({ticketingContract: address(0), deployerKey: vm.envUint("PRIVATE_KEY")});
     }
 
     function getMainnetConfig() public view returns (NetworkConfig memory) {
-        return NetworkConfig({
-            ticketingContract: address(0),
-            deployerKey: vm.envUint("PRIVATE_KEY")
-        });
+        return NetworkConfig({ticketingContract: address(0), deployerKey: vm.envUint("PRIVATE_KEY")});
     }
 
     function getAnvilConfig() public returns (NetworkConfig memory) {
@@ -48,9 +42,6 @@ contract HelperConfig is Script {
 
         Ticketing1155 ticketing = new Ticketing1155();
 
-        return NetworkConfig({
-            ticketingContract: address(ticketing),
-            deployerKey: ANVIL_KEY
-        });
+        return NetworkConfig({ticketingContract: address(ticketing), deployerKey: ANVIL_KEY});
     }
 }
